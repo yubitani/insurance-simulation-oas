@@ -1,0 +1,263 @@
+openapi: 3.0.0
+info:
+  title: Insurance Simulation System APIs
+  version: '1.0'
+  description: 保険シミュレーションシステムに関するAPI群
+  contact:
+    name: yubitani
+servers:
+  - url: 'http://localhost:8080'
+    description: local
+paths:
+  /statistics/total:
+    get:
+      summary: 資料請求件数の累計データ取得API
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  acquisitionDateTime:
+                    type: string
+                  data:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/totalDataRow'
+              examples:
+                example-1:
+                  value:
+                    acquiredDateTime: '2021-01-04T11:10:22.848855'
+                    data:
+                      - productName: 死亡保険
+                        number: 9
+                      - productName: 医療保険
+                        number: 2
+                      - productName: がん保険
+                        number: 5
+        '500':
+          description: Internal Server Error
+      operationId: get-statistics-total
+      description: 与件は不要。リクエスト時点での資料請求件数の累計データを商品別に返す。
+      tags:
+        - statistics
+  '/statistics/transition/{unitType}':
+    get:
+      summary: 資料請求件数の推移データ取得API
+      tags:
+        - statistics
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  acquisitionDateTime:
+                    type: string
+                  unitType:
+                    type: string
+                  data:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/transitionDataRow'
+              examples:
+                example_perHour:
+                  value:
+                    acquiredDateTime: '2021-01-04T02:10:07.535357'
+                    unitType: hour
+                    data:
+                      - dateTime: '2021-01-04  00:00'
+                        number: 4
+                      - dateTime: '2021-01-04  01:00'
+                        number: 2
+                      - dateTime: '2021-01-04  02:00'
+                        number: 2
+                example_perDay:
+                  value:
+                    acquiredDateTime: '2021-01-04T11:10:16.873183'
+                    unitType: day
+                    data:
+                      - dateTime: '2020-12-28'
+                        number: 3
+                      - dateTime: '2020-12-29'
+                        number: 2
+        '400':
+          description: Bad Request
+        '500':
+          description: Internal Server Error
+      operationId: get-transition
+      description: |-
+        与件として統計単位(日or時間)を受け取り、統計単位に応じた請求件数の推移データ（詳細は以下の通り）を返す。
+
+        　日別：リクエスト日前日までの2週間分（14日分）の日別推移データ
+        　時間別：リクエスト日の0時から現在時刻までの1時間単位での推移データ
+      parameters: []
+    parameters:
+      - schema:
+          type: string
+          enum:
+            - day
+            - hour
+        name: unitType
+        in: path
+        description: 統計単位（日or時間）の指定
+        required: true
+  /document-request:
+    get:
+      summary: 資料請求API
+      tags:
+        - simulation
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: array
+                description: 資料請求一覧
+                items:
+                  $ref: '#/components/schemas/documentRequest'
+              examples:
+                example-1:
+                  value:
+                    - receiptNo: '0123456789'
+                      registrationDate: '2020-12-12'
+                      name: 住友 太郎
+                      nameKana: スミトモ タロウ
+                      birthday: '1990-01-01'
+                      sex: '1'
+                      zipCode: 540-8512
+                      address: 大阪府大阪市中央区城見1－4－35
+                      tellNo: 06-6937-1435
+                      mailAddress: test@am.sumitomolife.co.jp
+                      simulations:
+                        - simulationId: '1234567890'
+                          productName: 死亡保険
+                          benefitHeaderName: 保険金
+                          benefit: '5,000,000円'
+                          periodOfInsurance: 10年
+                          optionList:
+                            - 三大疾病保障特約
+                            - リビング・ニーズ特約
+                          insurancePremium: '1,230円'
+                      sumInsurancePremium: '1,230円'
+        '500':
+          description: Internal Server Error
+      operationId: get-document-request
+      description: 与件は不要。資料請求一覧（リクエスト時点での最新10件の資料請求内容）を取得する。
+    parameters: []
+components:
+  schemas:
+    totalDataRow:
+      title: totalDataRow
+      type: object
+      x-tags:
+        - statistics
+      description: 資料請求件数累計データ（商品単位）_1行
+      x-examples: {}
+      properties:
+        productName:
+          type: string
+          description: 保険商品名
+        totalNumber:
+          type: integer
+          description: 資料請求件数総計
+    transitionDataRow:
+      title: transitionDataRow
+      type: object
+      x-tags:
+        - statistics
+      description: 資料請求件数推移データ（商品単位）_1行
+      x-examples:
+        example-1:
+          dateTime: string
+          number: 0
+      properties:
+        dateTime:
+          type: string
+        number:
+          type: integer
+    documentRequest:
+      title: documentRequest
+      type: object
+      x-examples: {}
+      description: 資料請求情報
+      x-tags:
+        - simulation
+      properties:
+        receiptNo:
+          type: string
+          description: 受付番号
+        registrationDate:
+          type: string
+          description: 登録日
+        name:
+          type: string
+          description: 氏名
+        nameKana:
+          type: string
+          description: カナ氏名
+        birthday:
+          type: string
+          description: 生年月日
+        sex:
+          type: string
+          description: 性別
+        zipCode:
+          type: string
+          description: 郵便番号
+        address:
+          type: string
+          description: 住所
+        telNo:
+          type: string
+          description: 電話番号
+        mailAddress:
+          type: string
+          description: メールアドレス
+        simulations:
+          type: array
+          description: 見積もり内容
+          items:
+            $ref: '#/components/schemas/simulation'
+        sumInsurancePremium:
+          type: string
+          description: 保険料合計
+    simulation:
+      title: simulation
+      type: object
+      description: 保険料見積もり情報
+      x-tags:
+        - simulation
+      x-examples: {}
+      properties:
+        simulationId:
+          type: string
+          description: 見積もりID
+        productName:
+          type: string
+          description: 選択した保険商品（画面表示用の文字列）
+        benefitHeaderName:
+          type: string
+          description: 保険金欄ヘッダーの表示内容（保険金or給付金）
+        benefit:
+          type: string
+          description: 選択した保険金・給付金（画面表示用の文字列）
+        periodOfInsurance:
+          type: string
+          description: 選択した保険期間（画面表示用の文字列）
+        optionList:
+          type: array
+          description: 選択したオプション（画面表示用の文字列）のリスト
+          items:
+            type: string
+        insurancePremium:
+          type: string
+          description: 保険料
+tags:
+  - name: simulation
+  - name: statistics
